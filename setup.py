@@ -38,12 +38,16 @@ if __name__ == '__main__':
 
     setup(
         name="Pianocktail",
-        version='0.7.3',
+        version='0.8.0',
         description="Pianocktail server.",
         author=__author__,
         author_email="bertrand.verdu@gmail.com",
         url="http://github.com/bverdu/Pyanocktail",
-        install_requires="twisted autobahn numpy pyalsa i2c-tools Rpi.GPIO",
+        install_requires=["twisted", "autobahn",
+                          "numpy",
+                          "pyalsa",
+                          "i2c-tools",
+                          "Rpi.GPIO"],
         packages=[
             "pyanocktail",
             "twisted.plugins",
@@ -84,7 +88,7 @@ if __name__ == '__main__':
                     ('/usr/share/pianocktail/html/fonts',
                      ['html/fonts/DEFTONE.ttf']),
                     ('/etc/pianocktail', []),
-                    ('/usr/share/pianocktail/db', []),
+                    ('/usr/share/pianocktail/db', ['pianocktail.db']),
                     ('/usr/lib/systemd/system', ['pianocktail.service']),
                     ('/usr/lib/systemd/system', ['pianocktail_80.service']),
                     ('/usr/lib/systemd/system', ['pianocktail_80.socket'])],

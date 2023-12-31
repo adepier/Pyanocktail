@@ -166,11 +166,13 @@ def getCocktails(session, alcool=True):
     reason = []
     if alcool == False:
         r = 0
-        for cocktail, recipe, ingredient in session.query(Cocktail, Recipe, Ingredient).\
-            filter(Cocktail.cocktail_id == Recipe.cocktail_id).\
-            filter(Recipe.ingredient_id == Ingredient.ingredient_id).\
-            filter(or_(Ingredient.qty_avail < Recipe.quantity,
-                       Ingredient.alcool > 0)).all():
+        for cocktail, recipe, ingredient in session.query(
+            Cocktail, Recipe, Ingredient).filter(
+                Cocktail.cocktail_id == Recipe.cocktail_id).filter(
+                    Recipe.ingredient_id == Ingredient.ingredient_id).filter(
+                        or_(
+                            Ingredient.qty_avail < Recipe.quantity,
+                            Ingredient.alcool > 0)).all():
             discarded.append(cocktail)
 #             print(discarded)
             if ingredient.alcool > 0:
@@ -182,12 +184,12 @@ def getCocktails(session, alcool=True):
             reason.append(r)
 #             print(reason)
     else:
-        for cocktail, recipe, ingredient in session.query(Cocktail, Recipe, Ingredient).\
-                filter(Cocktail.cocktail_id == Recipe.cocktail_id).\
-                filter(Recipe.ingredient_id == Ingredient.ingredient_id).\
-                filter(Ingredient.qty_avail < Recipe.quantity).all():
+        for cocktail, recipe, ingredient in session.query(
+            Cocktail, Recipe, Ingredient).filter(
+                Cocktail.cocktail_id == Recipe.cocktail_id).filter(
+                    Recipe.ingredient_id == Ingredient.ingredient_id).filter(
+                        Ingredient.qty_avail < Recipe.quantity).all():
             discarded.append(cocktail)
-
     for cocktail in session.query(Cocktail).all():
         try:
             r = reason[discarded.index(cocktail)]

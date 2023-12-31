@@ -24,7 +24,7 @@ from optparse import OptionParser
 __all__ = []
 __version__ = 0.1
 __date__ = '2013-12-14'
-__updated__ = '2019-12-05'
+__updated__ = '2023-12-29'
 
 DEBUG = 0
 TESTRUN = 0
@@ -84,7 +84,7 @@ def main(argv=None):
         parser.set_defaults(ports=[])
 
         # process options
-        (opts, args) = parser.parse_args(argv)
+        (opts, _) = parser.parse_args(argv)
 
 #         if opts.ports > 0:
 #             print("watching ports %r" % opts.ports)
@@ -101,18 +101,19 @@ def main(argv=None):
         '''
         Test if we are on a RaspberryPI
         '''
-        import RPIO
+        import RPi.GPIO as RPIO  #@UnresolvedImport
     except:
         '''
         Fake inputs for testing on 
         development workstation
         '''
         print('No GPIO interface, sending fake inputs')
+        print(opts.ports)
         import time
         while True:
             try:
                 for port in opts.ports:
-                    print(port)
+                    print("*******fake port: %s***********" % port)
                     time.sleep(30)
             except KeyboardInterrupt:
                 break

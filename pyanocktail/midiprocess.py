@@ -5,40 +5,43 @@ Created on 16 déc. 2012
 
 @author: Bertrand Verdu
 
-Standalone asynchrone module to capture  midi events and perform sequencer operations
+Standalone asynchrone module to capture  midi events and perform sequencer
+operations
 Interactive mode to capture commands and fake midi notes from stdin
 '''
 
 from __future__ import print_function
+from datetime import datetime
 from threading import Thread, Event
 import select
 import sys
 from os import getpid, read
 from time import time, sleep
 from optparse import OptionParser
-# from pyalsa.alsaseq import Sequencer, \
-#     SeqEvent, \
-#     SEQ_TIME_STAMP_REAL, \
-#     SEQ_PORT_TYPE_MIDI_GENERIC, \
-#     SEQ_PORT_TYPE_PORT, \
-#     SEQ_PORT_TYPE_APPLICATION, \
-#     SEQ_PORT_TYPE_HARDWARE, \
-#     SEQ_PORT_CAP_SUBS_WRITE, \
-#     SEQ_PORT_CAP_WRITE, \
-#     SEQ_PORT_CAP_SUBS_READ, \
-#     SEQ_PORT_CAP_READ, \
-#     SEQ_EVENT_NOTE, \
-#     SEQ_EVENT_NOTEON, \
-#     SEQ_EVENT_NOTEOFF
-from pyalsa.alsaseq import Sequencer, \
-    SeqEvent, \
-    SEQ_EVENT_NOTEON, \
-    SEQ_EVENT_NOTEOFF, \
-    SEQ_EVENT_CONTROLLER, \
-    SEQ_EVENT_PGMCHANGE, \
-    SEQ_BLOCK, \
-    SequencerError
-# from pyalsa.alsaseq import Sequencer, SeqEvent
+#from pyalsa.alsaseq import Sequencer, \
+#    SeqEvent, \
+#    SEQ_TIME_STAMP_REAL, \
+#    SEQ_PORT_TYPE_MIDI_GENERIC, \
+#    SEQ_PORT_TYPE_PORT, \
+#    SEQ_PORT_TYPE_APPLICATION, \
+#    SEQ_PORT_TYPE_HARDWARE, \
+#    SEQ_PORT_CAP_SUBS_WRITE, \
+#    SEQ_PORT_CAP_WRITE, \
+#    SEQ_PORT_CAP_SUBS_READ, \
+#    SEQ_PORT_CAP_READ, \
+#    SEQ_EVENT_NOTE, \
+#    SEQ_EVENT_NOTEON, \
+#    SEQ_EVENT_NOTEOFF, \
+#    SEQ_EVENT_CONTROLLER, \
+#    SEQ_EVENT_PGMCHANGE, \
+#    SEQ_BLOCK, \
+#    SequencerError
+    
+#from pyalsa.alsaseq import Sequencer, \
+#    SeqEvent, \
+#    SEQ_EVENT_NOTEON, \
+#    SEQ_EVENT_NOTEOFF, \
+from pyalsa.alsaseq import Sequencer, SeqEvent, SequencerError
 #
 SEQ_TIME_STAMP_REAL = 1
 SEQ_PORT_TYPE_MIDI_GENERIC = 2
@@ -50,8 +53,11 @@ SEQ_PORT_CAP_WRITE = 2
 SEQ_PORT_CAP_SUBS_READ = 32
 SEQ_PORT_CAP_READ = 1
 SEQ_EVENT_NOTE = 5
-# SEQ_EVENT_NOTEON = 6
-# SEQ_EVENT_NOTEOFF = 7
+SEQ_EVENT_NOTEON = 6
+SEQ_EVENT_NOTEOFF = 7
+SEQ_EVENT_CONTROLLER = 10
+SEQ_EVENT_PGMCHANGE = 11
+SEQ_BLOCK = 0
 
 options = {}
 options[('-l', '--list')] = {'dest': 'list_type',
@@ -79,6 +85,7 @@ class player(Thread):
 #         q = self.seq.queue
         tempo, ppq = self.seq.queue_tempo(self.seq.queue)
         print('tempo: %d ppq: %d' % (tempo, ppq), file=sys.stderr)
+        self.ppq = ppq
         self.mdilist = []
         mdindex = {}
         delay = float(self.notes[0].split()[0])
@@ -139,8 +146,9 @@ class player(Thread):
         self.running = True
         self.paused = False
         self.out = False
-#         self.seq.start_queue(self.seq.queue)
-        self.seq.start_queue(0)
+        self.current_notes = []
+        self.seq.start_queue(self.seq.queue)
+#        self.seq.start_queue(0)
 #         self.tmst = time() + (self.mdilist[-1][2] / 1000.00)
 #         print("time: %d, tmst: %d, delta: %d" % (
 #             time(), self.tmst, self.mdilist[-1][2] / 1000.00),
@@ -148,11 +156,20 @@ class player(Thread):
         if self.seq.outClientId:
             delay = float(self.notes[0].split()[0]) / 1000.00
             last = 0.0
+            print("record length: %d" % len(self.notes), file=sys.stderr)
+            evdata = None
             for n in self.notes:
                 note = n.split()
 #                 print(note, file=sys.stderr)
                 if e_stop.is_set():
                     print("bye", file=sys.stderr)
+                    for n in self.current_notes:
+                        evt = SeqEvent(SEQ_EVENT_NOTEOFF)
+                        evt.set_data({'note.note': evdata})
+                        evt.source = (self.seq.client_id, self.seq.outportId)
+                        evt.dest = (self.seq.outClientId, self.seq.outClientPort)
+                        self.seq.output_event(evt)
+                        self.seq.drain_output()
                     break
                 evtime = float(note[0]) / 1000.00 - delay
                 if len(note) > 4:
@@ -160,16 +177,17 @@ class player(Thread):
                         int(v) for v in note[1:]]
                 else:
                     evtype, evdata, evparam = [int(v) for v in note[1:]]
-                print(evdata, file=sys.stderr)
                 sleep(evtime - last)
                 last = evtime
                 if evtype == 1:
-                    evt = SeqEvent(6)  # Note On
+                    evt = SeqEvent(SEQ_EVENT_NOTEON)  # Note On
                     evt.set_data({'note.note': evdata,
                                   'note.velocity': evparam})
+                    self.current_notes.append(evdata)
                 elif evtype == 0:
-                    evt = SeqEvent(7)  # Note Off
+                    evt = SeqEvent(SEQ_EVENT_NOTEOFF)  # Note Off
                     evt.set_data({'note.note': evdata})
+                    self.current_notes.remove(evdata)
                 elif evtype == 3:
                     evt = SeqEvent(10)  # CONTROL
                     evt.set_data({'control.channel': evdata,
@@ -182,13 +200,15 @@ class player(Thread):
                 else:
                     print("Unknow Event: %d" % evtype, file=sys.stderr)
                     continue
+#                print('prepare event %s' % evtype, file=sys.stderr)
                 evt.source = (self.seq.client_id, self.seq.outportId)
                 evt.dest = (self.seq.outClientId, self.seq.outClientPort)
-                print('play event: %s %s' % (
-                    evt, evt.get_data()), file=sys.stderr)
+#                print('play event: %s %s' % (
+#                    evt, evt.get_data()), file=sys.stderr)
                 self.seq.output_event(evt)
-#                 self.seq.sync_output_queue()
                 self.seq.drain_output()
+                self.seq.sync_output_queue()
+#                self.seq.drain_output()
 
 #             i = 0
 #             n = len(self.mdilist)
@@ -387,21 +407,19 @@ class Seq(Sequencer):
             try:
                 self.inportId = self.create_simple_port(
                     "pianocktail-in",
-                    SEQ_PORT_TYPE_APPLICATION |
-                    2,
+                    SEQ_PORT_TYPE_MIDI_GENERIC,
                     SEQ_PORT_CAP_WRITE | SEQ_PORT_CAP_SUBS_WRITE)
             except SystemError as e:
-                print("inport failed: %s" % str(e), file=sys.stderr)
+                print("create inport failed: %s" % str(e), file=sys.stderr)
                 ret = False
         if not self.outportId:
             try:
                 self.outportId = self.create_simple_port(
                     "pianocktail-out",
-                    SEQ_PORT_TYPE_APPLICATION |
-                    SEQ_PORT_TYPE_MIDI_GENERIC,
+                    SEQ_PORT_TYPE_APPLICATION | SEQ_PORT_TYPE_MIDI_GENERIC,
                     SEQ_PORT_CAP_READ | SEQ_PORT_CAP_SUBS_READ)
             except SystemError:
-                print("outport failed", file=sys.stderr)
+                print("create outport failed", file=sys.stderr)
                 ret = False
         return ret
 
@@ -518,9 +536,17 @@ class Seq(Sequencer):
         f = open(self.filename, 'w+')
         f.writelines(note_list)
         f.close()
+        self._save()
+        print("file %s saved" % self.filename, file=sys.stderr)
         print('4 File saved')
+        
+    def _save(self):
+        name = datetime.now().strftime("%Y_%m_%d_%H_%M") + '.pckt'
+        fname = self.filename.split('current.pckt')[0] + name
+        print("saved as %s" % fname, file=sys.stderr)
 
     def quit(self):
+        print("bye", file=sys.stderr)
         sys.exit()
 
     def _handleCommand(self, command):
@@ -543,17 +569,17 @@ class Seq(Sequencer):
             #             print(event.type == SEQ_EVENT_NOTEON, file=sys.stderr)
             #             print("type: %d" % event.type, file=sys.stderr)
             d = event.get_data()
-            if event.type in (SEQ_EVENT_NOTEON, SEQ_EVENT_NOTEOFF):
+            if 'note.velocity' in d:
                 if d['note.velocity'] > 0:
                     evt = "%d %d %d %d" % (event_time,
-                                           int(event.type == SEQ_EVENT_NOTEON),
+                                           int(str(event.type) == 'SEQ_EVENT_NOTEON'),
                                            d['note.note'],
                                            d['note.velocity'])
 #                     evt = str(event_time * 1000) + ' ' +\
 #                         str(int(event.type == SEQ_EVENT_NOTEON)) + ' ' +\
 #                         str(event.get_data()['note.note']) + ' ' +\
 #                         str(event.get_data()['note.velocity'])
-                    print("Note: %s" % ("ON" if event.type == SEQ_EVENT_NOTEON
+                    print("Note: %s" % ("ON" if str(event.type) == 'SEQ_EVENT_NOTEON'
                                         else "OFF"), file=sys.stderr)
                 else:
                     evt = "%d 0 %d 0" % (event_time,
@@ -573,6 +599,7 @@ class Seq(Sequencer):
             else:
                 print('got unknown event: %s : %s' %
                       (event, str(event.get_data())), file=sys.stderr)
+                print(str(event.type), file=sys.stderr)
                 return
 
 #                 evt = str(event_time * 1000) + ' ' +\
@@ -621,7 +648,7 @@ class Seq(Sequencer):
         for connections in self.connection_list():
             cname, cid, ports = connections
             # skip midi through
-            if cname == 'Midi Through' or cname == self.clientname:
+            if cname == 'Midi Through' or "PipeWire" in cname:
                 continue
             print(ports)
             for port in ports:
@@ -635,14 +662,18 @@ class Seq(Sequencer):
                 if miditype & SEQ_PORT_TYPE_MIDI_GENERIC and caps & SEQ_PORT_CAP_WRITE:
                     # if  caps & (SEQ_PORT_CAP_SUBS_WRITE |
                     # SEQ_PORT_CAP_WRITE):
-                    print("2 Output_port: %s %s:%s" % (cname, cid, pid))
-                    outport = (cid, pid)
+                    print("Output_port: %s %s:%s" % (cname, cid, pid))
+                    if cname != self.clientname:
+                        print("2 Output_port: %s %s:%s" % (cname, cid, pid))
+                        outport = (cid, pid)
 #                    self.outClientId = cid
 #                    self.outPortId = pid
                 if miditype & SEQ_PORT_TYPE_MIDI_GENERIC and caps & SEQ_PORT_CAP_READ:
                     # if  caps & (SEQ_PORT_CAP_SUBS_READ | SEQ_PORT_CAP_READ):
-                    print("2 Input_port: %s %s:%s" % (cname, cid, pid))
-                    inport = (cid, pid)
+                    print("Input_port: %s %s:%s" % (cname, cid, pid))
+                    if cname != self.clientname:
+                        print("2 Input_port: %s %s:%s" % (cname, cid, pid))
+                        inport = (cid, pid)
 #                    self.inClientId = cid
 #                    self.inPortId = pid
         if inport != (0, 0):

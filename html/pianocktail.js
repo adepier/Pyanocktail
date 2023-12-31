@@ -799,10 +799,10 @@ function getConf() {
     var params = 'client=web&action=config&command=getconf';
     req.onreadystatechange = function () {
         if ((req.readyState == 4) && (req.status == 200)) {
-            var data = eval("(" + req.responseText + ")");
-            sets = document.getElementById("configparams");
-            childs = sets.childNodes;
-            z = childs.length
+            var data = eval("(" + req.responseText + ")"),
+            sets = document.getElementById("configparams"),
+            childs = sets.childNodes,
+            z = childs.length;
             for (var y = 0; y < z; y++) {
                 sets.removeChild(childs[0]);
             }
@@ -822,25 +822,9 @@ function getConf() {
                 changelist['debug'] = 0;
             }
             sets.appendChild(dbg);
-            var lab0 = document.createElement("label");
-            /* lab0.for ="alc"; */
-            lab0.innerHTML = "Alcool ?";
-            sets.appendChild(lab0);
-            var alc = document.createElement("input");
-            alc.id = "alc";
-            alc.type = "checkbox";
-            alc.value = data.alc;
-            alc.setAttribute("onClick", "setData(\"alc\")");
-            if (data.alc == 1) {
-                changelist['alc'] = 1;
-                alc.checked = "True";
-            } else {
-                changelist['alc'] = 0;
-            }
-            sets.appendChild(alc);
             var lab1 = document.createElement("label");
             /* lab1.for ="dep"; */
-            lab1.innerHTML = "Pump offset :";
+            lab1.innerHTML = "Offset :";
             sets.appendChild(lab1);
             var dep = document.createElement("input");
             dep.id = "dep";
@@ -874,6 +858,29 @@ function getConf() {
             tristesse.value = data.tristind;
             tristesse.setAttribute("onBlur", "setData(\"tristind\")");
             sets.appendChild(tristesse);
+            sets = document.getElementById("configparams2"),
+            childs = sets.childNodes,
+            z = childs.length;
+            for (var y = 0; y < z; y++) {
+                sets.removeChild(childs[0]);
+            }
+            var lab0 = document.createElement("label");
+            /* lab0.for ="alc"; */
+            lab0.innerHTML = "Alcool ?";
+            sets.appendChild(lab0);
+            var alc = document.createElement("input");
+            alc.id = "alc";
+            alc.type = "checkbox";
+            alc.value = data.alc;
+            alc.setAttribute("onClick", "setData(\"alc\")");
+            if (data.alc == 1) {
+                changelist['alc'] = 1;
+                alc.checked = "True";
+            } else {
+                changelist['alc'] = 0;
+            }
+            sets.appendChild(alc);
+            
             lab4 = document.createElement("label");
             /* lab4.for ="nervous"; */
             lab4.innerHTML = "Nervosity index :";
@@ -894,7 +901,7 @@ function getConf() {
             factor.id = "factor";
             factor.type = "number";
             factor.size = "3";
-            factor.step = "0.1";
+            factor.step = "1";
             factor.value = data.factor;
             factor.setAttribute("onBlur", "setData(\"factor\")");
             sets.appendChild(factor);

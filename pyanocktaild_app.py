@@ -5,7 +5,7 @@ Created on 28 mai 2012
 @author: babe
 '''
 #from pyanocktail.midi import sequencer, MidiThread
-from pyanocktail.wsServer import SeqFactory
+from pyanocktail.webServer import SeqFactory
 from pyanocktail.webServer import Dispatcher
 from pyanocktail.midiservice import MidiService
 from twisted.application import internet, service
@@ -40,7 +40,7 @@ def getSeqData(result_queue,status_queue):
                 midiservice.stopService(0)
                 midiservice.startService(0)
 
-        except Exception,err:
+        except Exception as err:
 #                pass
             if len(err.message) > 1:
                 log.msg(err.message)

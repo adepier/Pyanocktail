@@ -10,7 +10,6 @@
 from pyanocktail.dbUtils import initdb
 import os
 import json
-import attr
 
 
 class mainConfig:
@@ -40,7 +39,6 @@ class mainConfig:
     temoin_ready = 0
     temoin_analyse = 0
     temoin_error = 0
-    ttyPort = '/dev/serial0'
 #     httpport = 8888
     preservice = None
     postservice = None
@@ -61,7 +59,6 @@ class mainConfig:
     list_params = ('debug', 'extProgram', 'sysInport',
                    'sysOutport', 'alc', 'complexind', 'tristind', 'nervind',
                    'factor', 'langage')
-    type = 2 #module CAN
 
     def __init__(self, dirname, installdir, port, db=False):
         self.load(dirname, installdir)
@@ -75,12 +72,6 @@ class mainConfig:
             self.dbsession.sysIngs = None
             self.dbsession.inputs = None
         self.configdir = dirname
-        
-    def get(self, attr, default):
-        if hasattr(self, attr):
-            return getattr(self, attr)
-        else:
-            return default
 
     def dbconnect(self):
         try:

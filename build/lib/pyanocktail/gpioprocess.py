@@ -24,7 +24,7 @@ from optparse import OptionParser
 __all__ = []
 __version__ = 0.1
 __date__ = '2013-12-14'
-__updated__ = '2024-01-02'
+__updated__ = '2020-11-27'
 
 DEBUG = 0
 TESTRUN = 0
@@ -84,7 +84,7 @@ def main(argv=None):
         parser.set_defaults(ports=[])
 
         # process options
-        (opts, _) = parser.parse_args(argv)
+        (opts, args) = parser.parse_args(argv)
 
 #         if opts.ports > 0:
 #             print("watching ports %r" % opts.ports)
@@ -101,30 +101,31 @@ def main(argv=None):
         '''
         Test if we are on a RaspberryPI
         '''
-        import RPi.GPIO as RPIO  #@UnresolvedImport
+        import RPi.GPIO as RPIO
     except:
         '''
         Fake inputs for testing on 
         development workstation
         '''
-        print('No GPIO interface, Disabling')
-        print(opts.ports)
-        #import time
-        #while True:
-        #    try:
-        #        for port in opts.ports:
-        #            print("*******fake port: %s***********" % port)
-        #            time.sleep(30)
-        #    except KeyboardInterrupt:
-        #        break
+        print('No GPIO interface, sending fake inputs')
+        import time
+        while True:
+            try:
+                for port in opts.ports:
+                    print(port)
+                    time.sleep(30)
+            except KeyboardInterrupt:
+                break
     else:
         '''
         activate given ports in input mode and wait for events
         '''
         for port in opts.ports:
             RPIO.setup(int(port), RPIO.IN, pull_up_down=RPIO.PUD_UP)
+            RPIO.add_interrupt_callback(
+                int(port), gpio_callback, edge='falling', pull_up_down=RPIO.PUD_UP)
         try:
-            RPIO.add_event_callback( int(port), gpio_callback  )
+            RPIO.wait_for_interrupts()
         except KeyboardInterrupt:
             pass
 

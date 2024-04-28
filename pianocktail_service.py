@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 # encoding: utf-8
-'''
+''''
 onDemand -- Iot on demand !
  
 onDemand is a embedded service to connect to IOT platform
-
+ 
 @author:     Bertrand Verdu
 
 @copyright:  2015 LazyTech. All rights reserved.

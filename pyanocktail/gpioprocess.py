@@ -85,7 +85,6 @@ def main(argv=None):
 
         # process options
         (opts, _) = parser.parse_args(argv)
-        (opts, _) = parser.parse_args(argv)
 
 #         if opts.ports > 0:
 #             print("watching ports %r" % opts.ports)
@@ -102,7 +101,6 @@ def main(argv=None):
         '''
         Test if we are on a RaspberryPI
         '''
-        import RPi.GPIO as RPIO  #@UnresolvedImport
         import RPi.GPIO as RPIO  #@UnresolvedImport
     except:
         '''

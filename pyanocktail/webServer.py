@@ -16,12 +16,9 @@ from twisted.internet import defer,\
     utils,\
     endpoints, \
     serialport
-    endpoints, \
-    serialport
 from twisted.web.resource import Resource
 from twisted.web import server, static
 from twisted.python import log, util
-from twisted.protocols.basic import LineReceiver 
 from twisted.protocols.basic import LineReceiver 
 from autobahn.twisted.websocket import WebSocketServerFactory, \
     WebSocketServerProtocol
@@ -45,8 +42,6 @@ Com['panic'] = 4
 Com['close'] = 9
 Com['config'] = 6
 Com['pump'] = 10
-
-CanCommands = ["stop", "record", "play", "pump", "cocktail", "panic", "status"]
 
 CanCommands = ["stop", "record", "play", "pump", "cocktail", "panic", "status"]
 
@@ -106,31 +101,11 @@ class WebService(StreamServerEndpointService):
         reactor.callLater(5,  #@UndefinedVariable
                           self.init_ws)
         
-        
-#         self.realport = self.endpoint._port
-
-    def init_ws(self):
-        print("start ws")
-        if self._waitingForPort:
-            if hasattr(self._waitingForPort.result, "getHost"):
-                self.wsfactory = SeqFactory(
-                    self.debug, self._waitingForPort.result.getHost().port)
-                self.wsfactory.protocol = PyanoTCP
-        #         self.wsfactory.setProtocolOptions(allowHixie76=True)
-                self.wsfactory.parent = self
-                self.wsresource = WebSocketResource(self.wsfactory)
-                self.page.putChild(b"ws", self.wsresource)
-                return
-        reactor.callLater(5,  #@UndefinedVariable
-                          self.init_ws)
-        
 
     def startService(self):
         '''
         Start slave processes to intercept midi and gpio events
         '''
-        super(WebService, self).startService()
-        self.init_ws()
         super(WebService, self).startService()
         self.init_ws()
         self.startMidi()
@@ -168,14 +143,10 @@ class WebService(StreamServerEndpointService):
         self.gpio.factory = self.gpiofactory
         self.in_functions = dbUtils.getInputs(self.dbsession)
         print("*******%s" % self.in_functions)
-        print("*******%s" % self.in_functions)
         exe = sys.executable
         gpioscriptpath = util.sibpath(__file__, "gpioprocess.py")
         gpioex = [exe, "-u"]
         gpioex.append(gpioscriptpath)
-        gpioargs = []
-        if len(self.in_functions.keys()):
-            gpioargs += ['-i'] + list(self.in_functions.keys())
         gpioargs = []
         if len(self.in_functions.keys()):
             gpioargs += ['-i'] + list(self.in_functions.keys())
@@ -198,9 +169,6 @@ class WebService(StreamServerEndpointService):
         
     def display(self, text):
         self.wsfactory.sendmessage(text.encode("utf8"))
-        
-    def display(self, text):
-        self.wsfactory.sendmessage(text.encode("utf8"))
 
     def showResult(self, result):
         '''
@@ -212,8 +180,6 @@ class WebService(StreamServerEndpointService):
                 self.wsfactory.sendmessage(line.encode("utf8"))
                 self.canfactory.serial_port.write(line.encode("utf8") + b"\r\n")
             return int(result['cocktail'])
-                self.canfactory.serial_port.write(line.encode("utf8") + b"\r\n")
-            return int(result['cocktail'])
 
     def set_command(self, command, args=''):
         '''
@@ -222,9 +188,6 @@ class WebService(StreamServerEndpointService):
         if not isinstance(command, str):
             command = command.decode('utf8')
         if command == 'stop':
-            self.canfactory.serial_port.write(bytes([0xaa,5,6,1,0,0,0,0,0,0,0xbb]))
-            self.canfactory.serial_port.write(bytes([0xaa,5,6,2,1,0,0,0,0,0,0xbb]))
-            self.canfactory.serial_port.write(bytes([0xaa,5,6,3,0,0,0,0,0,0,0xbb]))
             self.canfactory.serial_port.write(bytes([0xaa,5,6,1,0,0,0,0,0,0,0xbb]))
             self.canfactory.serial_port.write(bytes([0xaa,5,6,2,1,0,0,0,0,0,0xbb]))
             self.canfactory.serial_port.write(bytes([0xaa,5,6,3,0,0,0,0,0,0,0xbb]))
@@ -244,9 +207,6 @@ class WebService(StreamServerEndpointService):
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,1,1,0,0,0,0,0,0xbb]))
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,3,0,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,1,1,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,3,0,0,0,0,0,0,0xbb]))
                 self.analyzed['cocktail'] = 0
                 self.analyzed['result'] = b''
                 if not self.recording:
@@ -254,9 +214,6 @@ class WebService(StreamServerEndpointService):
                     self.notes = []
         elif command == 'cocktail':
             if self.analyzed['cocktail'] > 0:
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,1,0,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,3,1,0,0,0,0,0,0xbb]))
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,1,0,0,0,0,0,0,0xbb]))
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,3,1,0,0,0,0,0,0xbb]))
@@ -304,7 +261,6 @@ class WebService(StreamServerEndpointService):
                 fct = getattr(self, "sys_" + command)
             except AttributeError:
                 log.msg("unknown function: %s" % command)
-                log.msg("unknown function: %s" % command)
             else:
                 fct(args)
 
@@ -323,7 +279,6 @@ class WebService(StreamServerEndpointService):
             self.wsfactory.sendmessage(command)
 
     def getDataAnalysis(self):
-        log.msg("alcool: %s" % bool(self.conf.alc))
         log.msg("alcool: %s" % bool(self.conf.alc))
         return dbUtils.getCocktails(self.dbsession, bool(self.conf.alc))
 
@@ -381,9 +336,6 @@ class WebService(StreamServerEndpointService):
     def serve(self, cocktail_id, qty=None):
         if not qty:
             qty = self.conf.factor
-    def serve(self, cocktail_id, qty=None):
-        if not qty:
-            qty = self.conf.factor
         if not isinstance(cocktail_id, int):
             if not isinstance(cocktail_id, str):
                 cocktail_id = cocktail_id.decode("utf8")
@@ -392,15 +344,7 @@ class WebService(StreamServerEndpointService):
             for ser_ in service:
                 ser_[0] = self.canfactory.serial_port
                 ser_[1] = 4
-        if self.type and self.type == 2:
-            for ser_ in service:
-                ser_[0] = self.canfactory.serial_port
-                ser_[1] = 4
         playRecipe(service, qty, self.debug)
-        ss = (b'', b'',)
-        if qty > 1:
-            ss = (b's', b's',)
-        return b"%.1f Cocktail%s Servi%s !" % (qty, *ss)
         ss = (b'', b'',)
         if qty > 1:
             ss = (b's', b's',)
@@ -440,11 +384,7 @@ class WebService(StreamServerEndpointService):
 
     def sys_shutdown(self, reboot=False):
         cmd = "reboot" if reboot else "poweroff"
-    def sys_shutdown(self, reboot=False):
-        cmd = "reboot" if reboot else "poweroff"
         if self.debug:
-            log.msg("%s requested" % cmd)
-        d = utils.getProcessValue('/bin/systemctl', [cmd])
             log.msg("%s requested" % cmd)
         d = utils.getProcessValue('/bin/systemctl', [cmd])
 #         d = utils.getProcessValue('/usr/bin/true')
@@ -513,9 +453,6 @@ class PyanoTCP(WebSocketServerProtocol):
         reactor.callLater(1,   # @UndefinedVariable
                           self.send, self.factory.lastmsg)
 #        self.send(self.factory.lastmsg)
-        reactor.callLater(1,   # @UndefinedVariable
-                          self.send, self.factory.lastmsg)
-#        self.send(self.factory.lastmsg)
 #     def dataReceived(self, data):
 
     def onMessage(self, data, binary):
@@ -574,10 +511,8 @@ class MidiProtocol(protocol.ProcessProtocol):
     def childDataReceived(self, childFD, data):
         if childFD == 1:
             
-            
             for l in data.split(b'\n'):
                 #                 print(l.lstrip()[2:])
-                log.msg("Midi: %s" % l)
                 log.msg("Midi: %s" % l)
                 try:
                     c = int(l.split()[0])
@@ -992,7 +927,6 @@ class MainPage(Resource):
                         Get Data
                         '''
                         if self.debug:
-                            log.msg("request %s without parameter" % request)
                             log.msg("request %s without parameter" % request)
                         self.queryDB(request, command)
                 elif action == 'pump':

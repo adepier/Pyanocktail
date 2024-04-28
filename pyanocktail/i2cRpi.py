@@ -110,9 +110,6 @@ def playRecipe(ingredients_list, qty=1, debug=False):
     can_ctrl = None
     can_msg = []
     can_id = None
-    can_ctrl = None
-    can_msg = []
-    can_id = None
 #     ingredients_list=[]
 #     if prelist != None:
 #         ingredients_list = prelist
@@ -120,22 +117,6 @@ def playRecipe(ingredients_list, qty=1, debug=False):
 #     if postlist != None:
 #         ingredients_list = ingredients_list + postlist
     for ingredient in ingredients_list:
-        if isinstance(ingredient[0], SerialPort):
-            print(ingredient)
-            if not can_ctrl:
-                can_ctrl = SerialCan(ingredient[0])
-                can_id = int(ingredient[1])
-                can_msg = [can_id, 6, 150]
-            if ingredient[1] != can_id:
-                can_msg += [19, 0, 200, 0]
-                can_ctrl.write(can_msg)
-                can_id = int(ingredient[1])
-                can_msg = [can_id, 6, 150]
-            if len(can_msg) % 9 == 0:
-                can_ctrl.write(can_msg)
-                can_msg = [can_id, 6, 150]
-            can_msg += [int(ingredient[2]) + 1, int(ingredient[3])]
-        elif ingredient[0] == 'gpio':
         if isinstance(ingredient[0], SerialPort):
             print(ingredient)
             if not can_ctrl:
@@ -262,23 +243,6 @@ def playRecipe(ingredients_list, qty=1, debug=False):
                     motor.forward()
                 time.sleep(float(abs(ingredient[3])))
             motor.stop()
-    if can_ctrl:
-        print(can_msg)
-        end_cock = [19, 0]
-        for data_ in end_cock:
-            if len(can_msg) % 9 == 0:
-                can_ctrl.write(can_msg[:])
-                can_msg = can_msg[:2]
-                print(can_msg)
-            can_msg.append(data_)
-            print(can_msg)
-        if len(can_msg) > 2:
-            print("hhh")
-            can_ctrl.write(can_msg[:])
-            can_msg = can_msg[:2]
-        can_msg += [200, 0]
-        can_ctrl.write(can_msg)
-        
     if can_ctrl:
         print(can_msg)
         end_cock = [19, 0]
@@ -875,41 +839,6 @@ class SerialCan(object):
             self.current = [self.start]
         print("")
                             
-        
-class SerialCan(object):
-    ''' Serial can interface for new Pianocktail
-    '''
-    def __init__(self, con):
-        if not con:
-            return False
-        self.con = con
-        self.start = 0xAA
-        self.stop = 0xBB
-        self.size = 11
-        self.current = [self.start]
-    
-    def write(self, msg):
-        print("Can write:", end=" ")
-        while len(msg):
-            if len(self.current) == 10:
-                for h_ in self.current:
-                    self.con.write(bytes([h_]))
-                    print(hex(h_), end=" ")
-                self.con.write(bytes([self.stop]))
-                print(hex(self.stop), end=" ")
-                self.current = [self.start]
-            self.current.append(msg.pop(0))
-        if len(self.current) > 1:
-            while len(self.current) < 10:
-                self.current.append(0x00)
-            for h_ in self.current:
-                self.con.write(bytes([h_]))
-                print(hex(h_), end=" ")
-            self.con.write(bytes([self.stop]))
-            print(hex(self.stop), end=" ")
-            self.current = [self.start]
-        print("")
-                            
 
 if __name__ == '__main__':
     print("Fake test first:")
@@ -950,11 +879,7 @@ if __name__ == '__main__':
         # Set pins 0, 1 and 2 to output (you can set pins 0..15 this way)
         mcp.config(0, mcp.OUTPUT)
         mcp.config(1, mcp.OUTPUT)
-        # Set pins 0, 1 and 2 to output (you can set pins 0..15 this way)
-        mcp.config(0, mcp.OUTPUT)
-        mcp.config(1, mcp.OUTPUT)
         print('gpio controller found at 0x%02X' % 0x20)
-        hasgpio = False
         hasgpio = False
     except:
         hasgpio = False
@@ -1001,7 +926,5 @@ if __name__ == '__main__':
             except KeyboardInterrupt:
                 pwm.setPWM(0, 0, 0)
                 break
-    reactor.callLater(20, reactor.stop)
-    reactor.run()
     reactor.callLater(20, reactor.stop)
     reactor.run()

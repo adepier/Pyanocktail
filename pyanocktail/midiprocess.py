@@ -18,6 +18,7 @@ import sys
 from os import getpid, read
 from time import time, sleep
 from optparse import OptionParser
+import shutil
 #from pyalsa.alsaseq import Sequencer, \
 #    SeqEvent, \
 #    SEQ_TIME_STAMP_REAL, \
@@ -543,6 +544,8 @@ class Seq(Sequencer):
     def _save(self):
         name = datetime.now().strftime("%Y_%m_%d_%H_%M") + '.pckt'
         fname = self.filename.split('current.pckt')[0] + name
+        #ADP on energistre le fichier avec l'heure pour voir des données
+        shutil.copy(self.filename, fname)
         print("saved as %s" % fname, file=sys.stderr)
 
     def quit(self):

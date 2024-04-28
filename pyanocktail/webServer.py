@@ -613,7 +613,7 @@ class CanSerialProtocol(LineReceiver):
             if data == b'\xbb':
                 if len(self.buf) and self.buf[0] == 6:
                     print("command received from %i:" % self.buf[1])
-                    if self.buf[3] == 0 or self.buf[2] == 2 :
+                    if self.buf[2] == 2 :
                         self.factory.got_command("stop")
                     elif self.buf[2] == 1:
                         self.factory.got_command("record")
@@ -655,10 +655,15 @@ class CanFactory(protocol.Factory):
             print(err)
         
     def got_command(self, command):
-        command = command.decode("utf8")
+        log.msg("got_command: %s" % command)
+        if not isinstance(command, str):
+            command = command.decode('utf8')
+        #command = command.decode("utf8")
         if command in CanCommands:
+            log.msg(" command in CanCommands: %s" % command)
             self.parent.set_command(command)
         else:
+            log.msg(" command NOT in CanCommands: %s" % command)
             self.parent.display(command)
         
         

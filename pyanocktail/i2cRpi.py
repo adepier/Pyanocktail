@@ -859,7 +859,7 @@ if __name__ == '__main__':
             else:
                 print("0x%0x" % ord(data), end= " ")
     pt = canTest()
-    cn = SerialPort(pt, "/tmp/vserial1", reactor)
+    cn = SerialPort(pt, "/dev/serial0", reactor)
     sampleGen = Internal_functions.sampleGen(10)
     recipe = [['fake_gpio', 0x20, 0, 2.1, 0, ''],
               ['fake_pwm', 0x40, 1, 2.3, 1.0, sampleGen], #@UndefinedVariable

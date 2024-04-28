@@ -2,7 +2,7 @@
 # encoding: utf-8
 '''
 onDemand -- Iot on demand !
-
+ 
 onDemand is a embedded service to connect to IOT platform
 
 @author:     Bertrand Verdu

@@ -179,6 +179,7 @@ class WebService(StreamServerEndpointService):
             for line in result['result']:
                 self.wsfactory.sendmessage(line.encode("utf8"))
                 self.canfactory.serial_port.write(line.encode("utf8") + b"\r\n")
+                log.msg("log message %s" % line)
             return int(result['cocktail'])
 
     def set_command(self, command, args=''):
@@ -650,7 +651,7 @@ class CanFactory(protocol.Factory):
         try:
             self.serial_port = serialport.SerialPort(self.proto,
                                                  self.port,
-                                                 reactor, baudrate = 9600 , timeout = 2)
+                                                 reactor, baudrate = 9600 , timeout = 2, bytesize=8, parity='N', stopbits=1)
         except Exception as err:
             print(err)
         

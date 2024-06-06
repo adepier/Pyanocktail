@@ -254,12 +254,12 @@ def getPumps(session):
     pumps = []
     for pump in session.query(Pump).all():
         pumps.append({'num': int(pump.pump),
-                      'type': str(pump.type),
-                      'description': str(pump.description),
-                      'bus': str(pump.i2cbus),
-                      'channel': int(pump.i2caddr),
-                      'ratio': float(pump.ratio),
-                      'funct': str(pump.function),
+                      'type': str(pump.type) if pump.type else "pwm",
+                      'description': str(pump.description) if pump.description else str(pump.pump),
+                      'bus': str(pump.i2cbus) if pump.i2cbus else "0x40",
+                      'channel': int(pump.i2caddr) if pump.i2caddr else (int(pump.pump) - 1),
+                      'ratio': float(pump.ratio) if pump.ratio else 0.4,
+                      'funct': str(pump.function) if pump.function else "None",
                       'avail': bool(pump.available)})
     session.pumps = pumps
     return pumps
@@ -267,6 +267,10 @@ def getPumps(session):
 
 def getPump(session, num):
     pump = []
+    if session.pumps != None:
+        for p in session.pumps:
+            if p["num"] == num:
+                return [p["type"], int(p["bus"], 16), p["channel"], p["ratio"], p["function"]]
     try:
         p = session.query(Pump).filter(Pump.pump == num).one()
         pump = [p.type, int(p.i2cbus, 16),  int(
@@ -279,8 +283,28 @@ def getPump(session, num):
     return pump
 
 
-def setPumps(session, pump_list):
-
+def setPumps(session, pump_list=None):
+    if pump_list == None:
+        if session.pumps != None:
+            for pump in session.pumps:
+                if session.query(Pump).filter(Pump.pump == pump['num']).count() == 0:
+                    p = Pump(pump['num'],
+                             description=pump['description'],
+                             type_=pump['type'],
+                             i2cbus=pump['bus'],
+                             i2caddr=str(pump['channel']),
+                             ratio=str(pump['ratio']),
+                             fct=pump['funct'])
+                else:
+                    p = session.query(Pump).filter(Pump.pump == pump['num']).one()
+                    p.description = pump['description']
+                    p.type = pump['type']
+                    p.i2cbus = pump['bus']
+                    p.i2caddr = str(pump['channel'])
+                    p.ratio = str(pump['ratio'])
+                    p.function = pump['funct']
+                session.add(p)
+        return session
     for row in pump_list:
         if session.query(Pump).filter(Pump.pump == row['pump']).count() == 0:
             if str(row['bus']) == '-1':
@@ -515,18 +539,23 @@ def getServe(session, cocktail):
     before = sysIng['before']
     after = sysIng['after']
     serve = []
-    for recipe, ingredient, pump in session.query(Recipe, Ingredient, Pump).\
-            filter(Recipe.ingredient_id == Ingredient.ingredient_id).\
-            filter(Recipe.cocktail_id == cocktail).\
-            filter(Ingredient.pump == Pump.pump).order_by(Recipe.order).all():
-        serve.append([str(pump.type),
-                      int(pump.i2cbus, 16),
-                      int(pump.i2caddr),
-                      float(int(ingredient.duration) *
-                            int(recipe.quantity) / 1000),
-                      float(pump.ratio),
-                      str(pump.function)])
-    print(before)
-    print(serve)
-    print(after)
+    try:
+        for recipe, ingredient, pump in session.query(Recipe, Ingredient, Pump).\
+                filter(Recipe.ingredient_id == Ingredient.ingredient_id).\
+                filter(Recipe.cocktail_id == cocktail).\
+                filter(Ingredient.pump == Pump.pump).order_by(Recipe.order).all():
+            serve.append([str(pump.type),
+                          int(pump.i2cbus, 16),
+                          int(pump.i2caddr),
+                          float(int(ingredient.duration) *
+                                int(recipe.quantity) / 1000),
+                          float(pump.ratio),
+                          str(pump.function)])
+    except TypeError:
+        if session.pumps != None:
+            getServe(setPumps(session), cocktail)
+            session.commit()
+    #print(before)
+    #print(serve)
+    #print(after)
     return before + serve + after

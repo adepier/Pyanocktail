@@ -123,8 +123,10 @@ def main(argv=None):
         '''
         for port in opts.ports:
             RPIO.setup(int(port), RPIO.IN, pull_up_down=RPIO.PUD_UP)
+            RPIO.add_interrupt_callback(
+                int(port), gpio_callback, edge='falling', pull_up_down=RPIO.PUD_UP)
         try:
-            RPIO.add_event_callback( int(port), gpio_callback  )
+            RPIO.wait_for_interrupts()
         except KeyboardInterrupt:
             pass
 

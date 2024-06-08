@@ -164,9 +164,12 @@ class WebService(StreamServerEndpointService):
         self.dbsession.commit()
 
     def badResult(self):
-        self.wsfactory.sendmessage(
-            'On ne sert pas les fainéants !!!\n'.encode("utf8"))
-        
+        tt =  "On ne sert pas les fainéants !!!\n"
+        self.wsfactory.sendmessage( tt.encode("utf8"))
+        self.canfactory.serial_port.write(bytes([0xaa,5,6,99,1,0,0,0,0,0,0xbb]))
+        self.canfactory.serial_port.write(tt.encode("utf8"))
+        self.canfactory.serial_port.write(bytes([0xff])) 
+        self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
     def display(self, text):
         self.wsfactory.sendmessage(text.encode("utf8"))
 
@@ -176,10 +179,13 @@ class WebService(StreamServerEndpointService):
         '''
         if result != None:
             self.analyzed = result
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,99,1,0,0,0,0,0,0xbb]))
             for line in result['result']:
                 self.wsfactory.sendmessage(line.encode("utf8"))
                 self.canfactory.serial_port.write(line.encode("utf8") + b"\r\n")
                 log.msg("log message %s" % line)
+            self.canfactory.serial_port.write(bytes([0xff])) 
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
             return int(result['cocktail'])
 
     def set_command(self, command, args=''):
@@ -189,9 +195,15 @@ class WebService(StreamServerEndpointService):
         if not isinstance(command, str):
             command = command.decode('utf8')
         if command == 'stop':
-            self.canfactory.serial_port.write(bytes([0xaa,5,6,1,0,0,0,0,0,0,0xbb]))
-            self.canfactory.serial_port.write(bytes([0xaa,5,6,2,1,0,0,0,0,0,0xbb]))
-            self.canfactory.serial_port.write(bytes([0xaa,5,6,3,0,0,0,0,0,0,0xbb]))
+            log.msg("log message stop1")
+            # bouton stop (cmde:12) allumé
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,12,1,0,0,0,0,0,0xbb])) 
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+            # bouton stop (cmde:12) eteint
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,12,0,0,0,0,0,0,0xbb])) 
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+            # self.canfactory.serial_port.write(bytes([0xaa,5,6,12,1,0,0,0,0,0,0xbb]))
+            # self.canfactory.serial_port.write(bytes([0xaa,5,6,13,0,0,0,0,0,0,0xbb]))
             if self.playing:
                 self.midifactory.command('play 0')
                 self.playing = False
@@ -205,9 +217,15 @@ class WebService(StreamServerEndpointService):
             if command == 'play':
                 self.playing = True
             else:
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,1,1,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,3,0,0,0,0,0,0,0xbb]))
+                # bouton enregistre (cmde:11) allumé
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,11,1,0,0,0,0,0,0xbb])) 
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+                # bouton enregistre (cmde:11)  
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,11,0,0,0,0,0,0,0xbb])) 
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+                # self.canfactory.serial_port.write(bytes([0xaa,5,6,1,1,0,0,0,0,0,0xbb]))
+                # self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
+                # self.canfactory.serial_port.write(bytes([0xaa,5,6,3,0,0,0,0,0,0,0xbb]))
                 self.analyzed['cocktail'] = 0
                 self.analyzed['result'] = b''
                 if not self.recording:
@@ -215,9 +233,15 @@ class WebService(StreamServerEndpointService):
                     self.notes = []
         elif command == 'cocktail':
             if self.analyzed['cocktail'] > 0:
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,1,0,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
-                self.canfactory.serial_port.write(bytes([0xaa,5,6,3,1,0,0,0,0,0,0xbb]))
+                # bouton servir (cmde:13) allumé
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,13,1,0,0,0,0,0,0xbb])) 
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+                # bouton servir (cmde:13) eteint
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,13,0,0,0,0,0,0,0xbb])) 
+                self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+                # self.canfactory.serial_port.write(bytes([0xaa,5,6,1,0,0,0,0,0,0,0xbb]))
+                # self.canfactory.serial_port.write(bytes([0xaa,5,6,2,0,0,0,0,0,0,0xbb]))
+                # self.canfactory.serial_port.write(bytes([0xaa,5,6,3,1,0,0,0,0,0,0xbb]))
                 d = threads.deferToThread(
                     self.serve, *(self.analyzed['cocktail'], self.conf.factor))
                 d.addCallback(self.wsfactory.sendmessage)
@@ -590,7 +614,7 @@ class MidiFactory(protocol.Factory):
         
 class CanSerialProtocol(LineReceiver):
     
-    delimiter = b'\r'
+    delimiter = 0xbb
 
     def connectionMade(self):
         print("Serial connection OK")
@@ -601,31 +625,46 @@ class CanSerialProtocol(LineReceiver):
         self.buf = []
     def rawDataReceived(self, data):
         print(data)
-        if self.first:
-            if data != b'\xaa':
-                print("line mode")
-                self.setLineMode(data)
+        if data[0] == 0xaa:
+            print(data[0])
+            print(data[9])
+            
+            print("command received from %i:" % data[1])
+            if data[3] == 12 :
+                self.factory.got_command("stop")
+            elif data[3] == 11:
+                self.factory.got_command("record")
+            elif data[3] == 13:
+                self.factory.got_command("cocktail")
+            # elif data[2] == 4:
+            #     factory.got_command("play")
             else:
-                print("Can Received Hex: 0x%0x" % ord(data), end=" ")
-                self.first = False
-        else:
-            print("0x%0x" % ord(data), end= " ")
-            self.buf.append(int(ord(data)))
-            if data == b'\xbb':
-                if len(self.buf) and self.buf[0] == 6:
-                    print("command received from %i:" % self.buf[1])
-                    if self.buf[2] == 2 :
-                        self.factory.got_command("stop")
-                    elif self.buf[2] == 1:
-                        self.factory.got_command("record")
-                    elif self.buf[2] == 3:
-                        self.factory.got_command("cocktail")
-                    elif self.buf[2] == 4:
-                        self.factory.got_command("play")
-                    else:
-                        print("unknown command %i" % self.buf[2])
-                self.buf = []
-                self.first = True
+                print("unknown command %i" % data[2])
+        # if self.first:
+        #     if data[0] != 0xaa:
+        #         print("line mode")
+        #         self.setLineMode(data)
+        #     else:
+        #         # print("Can Received Hex: 0x%0x" % ord(data), end=" ")
+        #         self.first = False
+        # else:
+        #     # print("0x%0x" % ord(data), end= " ")
+        #     # self.buf.append(int((data)))
+        #     if data == 0xbb:
+        #         if len(self.buf) and self.buf[0] == 6:
+        #             print("command received from %i:" % self.buf[1])
+        #             if self.buf[2] == 2 :
+        #                 self.factory.got_command("stop")
+        #             elif self.buf[2] == 1:
+        #                 self.factory.got_command("record")
+        #             elif self.buf[2] == 3:
+        #                 self.factory.got_command("cocktail")
+        #             elif self.buf[2] == 4:
+        #                 self.factory.got_command("play")
+        #             else:
+        #                 print("unknown command %i" % self.buf[2])
+        #         self.buf = []
+        #         self.first = True
     def lineReceived(self, line):
         print("Data serial received: %s" % line.strip())
         self.first = True

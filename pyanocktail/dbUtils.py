@@ -556,6 +556,6 @@ def getServe(session, cocktail):
             getServe(setPumps(session), cocktail)
             session.commit()
     #print(before)
-    #print(serve)
+    print('dbUtils.getServe serve = %s'  % serve)
     #print(after)
     return before + serve + after

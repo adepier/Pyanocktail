@@ -118,7 +118,9 @@ def playRecipe(ingredients_list, qty=1, debug=False):
 #         ingredients_list = ingredients_list + postlist
     for ingredient in ingredients_list:
         if isinstance(ingredient[0], SerialPort):
-            print(ingredient)
+            print("SerialPort.ingredient = %s " %  ingredient)
+            print("SerialPort.ingredient[0] = %s " %  ingredient[0])
+            print("SerialPort.ingredient[1] = %s " %  ingredient[1])
             if not can_ctrl:
                 can_ctrl = SerialCan(ingredient[0])
                 can_id = int(ingredient[1])
@@ -131,7 +133,9 @@ def playRecipe(ingredients_list, qty=1, debug=False):
             if len(can_msg) % 9 == 0:
                 can_ctrl.write(can_msg)
                 can_msg = [can_id, 6, 150]
+            # on ajoute les ingredients 2 = numéro de bouteille/ 3 durée en entier
             can_msg += [int(ingredient[2]) + 1, int(ingredient[3])]
+            print("can_msg  %s " % can_msg)
         elif ingredient[0] == 'gpio':
             try:
                 idx = init_gpio.index(ingredient[1])
@@ -244,6 +248,7 @@ def playRecipe(ingredients_list, qty=1, debug=False):
                 time.sleep(float(abs(ingredient[3])))
             motor.stop()
     if can_ctrl:
+        print("can_ctrl")
         print(can_msg)
         end_cock = [19, 0]
         for data_ in end_cock:

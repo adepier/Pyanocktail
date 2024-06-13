@@ -544,7 +544,7 @@ class Seq(Sequencer):
     def _save(self):
         name = datetime.now().strftime("%Y_%m_%d_%H_%M") + '.pckt'
         fname = self.filename.split('current.pckt')[0] + name
-        #ADP on energistre le fichier avec l'heure pour voir des données
+        #ADP on energistre le fichier avec l'heure pour avoir des données
         shutil.copy(self.filename, fname)
         print("saved as %s" % fname, file=sys.stderr)
 
@@ -562,6 +562,7 @@ class Seq(Sequencer):
 
     def _handleMidiEvent(self, event, time_):
         event_time = (time_ - self.start_time) * 1000
+         
 #         try:
 #             evt = str(int(event.type == SEQ_EVENT_NOTEON))+' '\
 #             +str(event.get_data()['note.note'])+' '+str(event_time)

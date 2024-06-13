@@ -195,7 +195,7 @@ class WebService(StreamServerEndpointService):
         if not isinstance(command, str):
             command = command.decode('utf8')
         if command == 'stop':
-            log.msg("log message stop1")
+            log.msg("log message stop")
             # bouton stop (cmde:12) allumé
             self.canfactory.serial_port.write(bytes([0xaa,5,6,12,1,0,0,0,0,0,0xbb])) 
             self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
@@ -365,9 +365,11 @@ class WebService(StreamServerEndpointService):
             if not isinstance(cocktail_id, str):
                 cocktail_id = cocktail_id.decode("utf8")
         service = dbUtils.getServe(self.dbsession, cocktail_id)
+        #self.type == 2 => CAN control
         if self.type and self.type == 2:
             for ser_ in service:
                 ser_[0] = self.canfactory.serial_port
+                # 4 => DEVICE_ID
                 ser_[1] = 4
         playRecipe(service, qty, self.debug)
         ss = (b'', b'',)

@@ -17,7 +17,16 @@ Requirements:
 	*numpy
   
 Written by Bertrand Verdu and Florent Jaillet
-  
+
+to run it on Raspberry Pi 3/4 be carefull to disable bluetooth to use serial!
+
+(https://raspberry-pi.fr/activer-port-serie-raspberry-pi/)
+
+```
+echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
+sudo systemctl disable hciuart
+sudo reboot
+```  
 _________________
 
 Copyright (C) 2003-2013  Bertrand Verdu, Florent Jaillet

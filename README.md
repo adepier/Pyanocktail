@@ -27,6 +27,11 @@ echo "dtoverlay=disable-bt" | sudo tee -a /boot/config.txt
 sudo systemctl disable hciuart
 sudo reboot
 ```  
+pour lancer le debug
+```
+ python3 /home/pi/Pyanocktail/pianocktail_service.py -x
+```
+
 _________________
 
 Copyright (C) 2003-2013  Bertrand Verdu, Florent Jaillet

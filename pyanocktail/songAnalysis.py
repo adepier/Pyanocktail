@@ -28,8 +28,9 @@ def filter_process_result(output, cocktails, compind=1, tristind=1, nervind=1, d
             duree = float(line.split()[0].split('=')[1])
             tristesse = float(line.split()[1].split('=')[1])
             enervement = float(line.split()[2].split('=')[1])
-            res.append(("Durée du morceau: %d secondes" % duree))
-            res.append(('Mélancolie: %d' % tristesse))
+            # on enlève la durée parceque en mode auto c'est toujours 5 secondes
+            # res.append(("Durée du morceau: %d secondes" % duree))
+            res.append(('Melancolie: %d' % tristesse))
             res.append(('Passion: %d' % enervement))
             if debug:
                 print("Durée du morceau: %.2f" % duree)
@@ -40,23 +41,23 @@ def filter_process_result(output, cocktails, compind=1, tristind=1, nervind=1, d
             complexite = float(line.split()[0].split('=')[1])
             metrique = line.split()[1].split('=')[1]
             tonalite = line.split()[2].split('=')[1]
-            res.append(('Virtuosisticité: %d' % complexite))
+            res.append(('Virtuosite: %d' % complexite))
             if debug:
                 print("Complexité: %.3f " % complexite)
             if int(metrique.strip('.')) == 2:
-                res.append(("Métrique = Binaire"))
+                res.append(("Metrique = Binaire"))
                 if debug:
                     print(u"Métrique = Binaire")
             elif int(metrique.strip('.')) == 3:
-                res.append(("Métrique = Ternaire"))
+                res.append(("Metrique = Ternaire"))
                 if debug:
                     print(u"Métrique = Ternaire")
             else:
-                res.append(("Métrique incoherente...."))
+                res.append(("Metrique incoherente...."))
                 if debug:
                     print("Métrique incoherente....")
             res.append(
-                ("Tonalité: %s" % tonalite_tab[int(tonalite.strip('.')) - 1]))
+                ("Tonalite: %s" % tonalite_tab[int(tonalite.strip('.')) - 1]))
             if debug:
                 print(
                     ("Tonalité: %s" %
@@ -78,8 +79,8 @@ def filter_process_result(output, cocktails, compind=1, tristind=1, nervind=1, d
             continue
         score = math.fabs(tristesse * tristind -
                           float(recipe['score2']))
-#         if debug:
-#             print("%s pass1 score: %.3f" % (recipe['name'], score))
+        if debug:
+            print("%s pass1 score: %.3f" % (recipe['name'], score))
         score_tonio = math.fabs((
             (tristesse * tristind +
              complexite * compind +

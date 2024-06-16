@@ -384,7 +384,8 @@ class Seq(Sequencer):
             Sequencer.__init__(self)
 #         Sequencer.__init__(self, mode=SEQ_BLOCK)
         self.commands = {b'connect': self.connect, b'serve': self.serve, b'disconnect': self.disconnect_ports,
-                         b'record': self.record, b'load': self.load, b'play': self.play, b'list': self.list, b'quit': self.quit}
+                         b'record': self.record, b'load': self.load, b'play': self.play, b'list': self.list, b'quit': self.quit,
+                         b'modeAuto': self.modeAuto}
         self.clientname = name
         self.queue = self.create_queue('Output_queue')
         self.inportId = None
@@ -485,8 +486,19 @@ class Seq(Sequencer):
         self.output_event(play)
         self.drain_output()
         self.sync_output_queue()
+    def modeAuto(self, param):
+       if int(param) == 0:
+        #    arrete le mode auto
+           self.modeAuto=False
+           self.modeAutoStartTime == None
+
+       if int(param) == 1:
+        #    demarre le mode auto
+           self.modeAuto=True
+           self.modeAutoStartTime == None
 
     def record(self, param):
+        print('commande record reçue', file=sys.stderr)
         if int(self.recording) != int(param):
             if int(param) == 0:
                 self.recording = False
@@ -529,6 +541,28 @@ class Seq(Sequencer):
             print('Unable to open file: %s' % filename, file=sys.stderr)
 
     def _store_event(self, event):
+        # on ajoute le mode Auto, si en mode auto, on commence à analyser
+        # à la premiere note touchée.
+        # au bout de 10 sec on lance l'analyse
+        if self.modeAuto and  self.modeAutoStartTime == None:
+            self.modeAutoStartTime = time()
+            self.start_time = time()
+            self.records = []
+            self.recordfile = []
+            self.recording = True
+            # envoie un message au webServer, qui envoie des message à l'écran
+            # et active la methode record de midiprocess.py
+            print('1 Recording_auto')
+        if self.modeAuto and self.modeAutoStartTime != None:
+            if  time() - self.modeAutoStartTime > 5:
+                # on envoie le message au webServer, 
+                # et on remet les variables à zero
+                # self.midi.factory.receive -> webServer.get_command reçoit la commande
+                # 
+                self.modeAuto=False
+                self.modeAutoStartTime = None
+                print('1 Recorded_auto')
+                
         if self.recording:
             self.records.append(event)
             self.recordfile.append(event + '\n')
@@ -601,9 +635,10 @@ class Seq(Sequencer):
                                       d['control.channel'],
                                       d['control.value'])
             else:
-                print('got unknown event: %s : %s' %
-                      (event, str(event.get_data())), file=sys.stderr)
-                print(str(event.type), file=sys.stderr)
+                # envoie des message de type SEQ_EVENT_CLOCK(36) en permanence!
+                # print('got unknown event: %s : %s' %
+                #       (event, str(event.get_data())), file=sys.stderr)
+                # print(str(event.type), file=sys.stderr)
                 return
 
 #                 evt = str(event_time * 1000) + ' ' +\
@@ -692,6 +727,8 @@ class Seq(Sequencer):
 
     def start(self, command_in, auto, filename):
         self.recording = False
+        self.modeAuto = False
+        self.modeAutoStartTime = None
         self.playing = False
         self.paused = False
         self.start_time = time()
@@ -713,9 +750,9 @@ class Seq(Sequencer):
                 test = events[0]
             except IndexError:
                 command = read(command_in, 20)
-#                 print("444: %s" % command, file=sys.stderr)
+                # print("444: %s" % command, file=sys.stderr)
                 for c in command.split(b'\n'):
-                    #                     print(c, file=sys.stderr)
+                    print(c, file=sys.stderr)
                     if len(c) > 0:
                         if int(c[0]) < 58:
                             self._handleMidiEvent(c[:5], event_time)

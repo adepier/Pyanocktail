@@ -43,7 +43,7 @@ Com['close'] = 9
 Com['config'] = 6
 Com['pump'] = 10
 
-CanCommands = ["stop", "record", "play", "pump", "cocktail", "panic", "status"]
+CanCommands = ["stop", "record", "play", "pump", "cocktail", "panic", "status", "modeAuto"]
 
 
 class WebService(StreamServerEndpointService):
@@ -58,6 +58,7 @@ class WebService(StreamServerEndpointService):
         self.playing = False
         self.conf = conf
         self.recording = False
+        self.modeAuto = True
         self.analysing = False
         self.serving = False
         self.opened = False
@@ -167,6 +168,7 @@ class WebService(StreamServerEndpointService):
         tt =  "On ne sert pas les fainéants !!!\n"
         self.wsfactory.sendmessage( tt.encode("utf8"))
         self.canfactory.serial_port.write(bytes([0xaa,5,6,99,1,0,0,0,0,0,0xbb]))
+        # on envoie du texte, 0xff termine la ligne
         self.canfactory.serial_port.write(tt.encode("utf8"))
         self.canfactory.serial_port.write(bytes([0xff])) 
         self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
@@ -194,7 +196,12 @@ class WebService(StreamServerEndpointService):
         '''
         if not isinstance(command, str):
             command = command.decode('utf8')
-        if command == 'stop':
+        if command == 'modeAuto':
+
+            self.midifactory.command('modeAuto 1')
+ 
+            # self.set_command('record')
+        elif command == 'stop':
             log.msg("log message stop")
             # bouton stop (cmde:12) allumé
             self.canfactory.serial_port.write(bytes([0xaa,5,6,12,1,0,0,0,0,0,0xbb])) 
@@ -217,6 +224,7 @@ class WebService(StreamServerEndpointService):
             if command == 'play':
                 self.playing = True
             else:
+                print('commande recue record')
                 # bouton enregistre (cmde:11) allumé
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,11,1,0,0,0,0,0,0xbb])) 
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
@@ -232,6 +240,8 @@ class WebService(StreamServerEndpointService):
                     self.recording = True
                     self.notes = []
         elif command == 'cocktail':
+            log.msg('commande recue cocktail')
+            log.msg('cocktail %s'  % self.analyzed['cocktail'])
             if self.analyzed['cocktail'] > 0:
                 # bouton servir (cmde:13) allumé
                 self.canfactory.serial_port.write(bytes([0xaa,5,6,13,1,0,0,0,0,0,0xbb])) 
@@ -297,9 +307,33 @@ class WebService(StreamServerEndpointService):
             log.msg('command from midi process: %s' % command.decode("utf8"))
         if command == b'Recorded':
             self.wsfactory.sendmessage(b"Analysing...")
-#             log.msg(self.notes)
+            # analyse
+            # log.msg(self.notes)
             d = threads.deferToThread(self.getDataAnalysis)
             d.addCallback(self.analyze)
+            
+        elif command == b'Recording_auto':
+            print('recording auto!')
+            # on allume les carrousels
+            self.canfactory.serial_port.write(bytes([0xaa,1,6,12,0,0,0,0,0,0,0xbb])) 
+            self.canfactory.serial_port.write(bytes([0xaa,1,6,200,1,0,0,0,0,0,0xbb]))
+            
+            self.canfactory.serial_port.write(bytes([0xaa,2,6,12,0,0,0,0,0,0,0xbb])) 
+            self.canfactory.serial_port.write(bytes([0xaa,2,6,200,1,0,0,0,0,0,0xbb]))
+            
+            self.canfactory.serial_port.write(bytes([0xaa,3,6,12,0,0,0,0,0,0,0xbb])) 
+            self.canfactory.serial_port.write(bytes([0xaa,3,6,200,1,0,0,0,0,0,0xbb]))
+            self.set_command('record') 
+
+        elif command == b'Recorded_auto':
+            print('mode auto : recorded -> anaylse -> serve ')  
+            self.wsfactory.sendmessage(b"Analysing...")
+            # analyse
+            # log.msg(self.notes)
+            d = threads.deferToThread(self.getDataAnalysis)
+            # d.addCallback(self.analyze)
+            # service
+            d.addCallback(lambda _:self.set_command('cocktail'))
         else:
             self.wsfactory.sendmessage(command)
 
@@ -371,6 +405,7 @@ class WebService(StreamServerEndpointService):
                 ser_[0] = self.canfactory.serial_port
                 # 4 => DEVICE_ID
                 ser_[1] = 4
+        log.msg('recette: %s' % service)
         playRecipe(service, qty, self.debug)
         ss = (b'', b'',)
         if qty > 1:
@@ -400,6 +435,7 @@ class WebService(StreamServerEndpointService):
         if self.debug:
             log.msg("Analyse Python")
         if len(self.notes) < 4:
+            log.msg("moins de 4 notes")
             self.badResult()
             return 0
 #         d = threads.deferToThread(PIANOCKTAIL, *(os.path.join(self.conf.installdir,"scripts","current.pckt"),self.notes))
@@ -536,18 +572,20 @@ class MidiProtocol(protocol.ProcessProtocol):
         self.write(b'list io')
 
     def childDataReceived(self, childFD, data):
+        # For compatibility, the default implementation of .childDataReceived
+        #  dispatches to .outReceived or .errReceived when “childFD” is 1 or 2.
         if childFD == 1:
             
             for l in data.split(b'\n'):
-                #                 print(l.lstrip()[2:])
-                log.msg("Midi: %s" % l)
+                print(l.lstrip()[2:])
+                log.msg("childDataReceived Midi: %s" % l)
                 try:
                     c = int(l.split()[0])
 #                     print(c)
                     self.factory.receive(c, l.lstrip()[2:])
                 except (IndexError, ValueError):
                     if len(l) > 1:
-                        log.msg("unknown message from midi process: %s" % l)
+                        log.msg("unknown message .outReceived from midi process: %s" % l)
         elif childFD == 2:
             for l in data.split(b'\n'):
                 if l != b'':
@@ -559,7 +597,7 @@ class MidiProtocol(protocol.ProcessProtocol):
                         self.factory.parent.notes.append(
                             [float(n[0]), float(n[1]), float(n[2]), float(n[3])])
                     except:
-                        #                             log.msg("unknown message from midiprocess: %s" %l)
+                        # log.msg("unknown message .errReceived from midiprocess: %s" %l)
                         pass
 
     def write(self, data):
@@ -638,8 +676,8 @@ class CanSerialProtocol(LineReceiver):
                 self.factory.got_command("record")
             elif data[3] == 13:
                 self.factory.got_command("cocktail")
-            # elif data[2] == 4:
-            #     factory.got_command("play")
+            elif data[3] == 14:
+                self.factory.got_command("modeAuto")
             else:
                 print("unknown command %i" % data[2])
         # if self.first:

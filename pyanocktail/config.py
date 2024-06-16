@@ -45,7 +45,7 @@ class mainConfig:
     preservice = None
     postservice = None
     old = 1
-    alc = 0
+    alc = 1
     complexind = 0.5
     tristind = 1
     nervind = 1

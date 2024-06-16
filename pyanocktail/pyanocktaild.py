@@ -69,6 +69,7 @@ def makeService(config):
 #         basedir = conf.installdir
     debug = conf.debug
     #theme = conf.theme
+    log.msg("alcool: %s" % bool(conf.alc))
     log.msg("Pianocktail main service started...")
     if debug:
         log.msg("Debug mode")

@@ -551,6 +551,7 @@ def getServe(session, cocktail):
                                 int(recipe.quantity) / 1000),
                           float(pump.ratio),
                           str(pump.function)])
+            print(' str(pump.function) %s'  % str(pump.function))
     except TypeError:
         if session.pumps != None:
             getServe(setPumps(session), cocktail)

@@ -118,15 +118,21 @@ def playRecipe(ingredients_list, qty=1, debug=False):
 #         ingredients_list = ingredients_list + postlist
     for ingredient in ingredients_list:
         if isinstance(ingredient[0], SerialPort):
-            print("SerialPort.ingredient = %s " %  ingredient)
-            print("SerialPort.ingredient[0] = %s " %  ingredient[0])
-            print("SerialPort.ingredient[1] = %s " %  ingredient[1])
+            # print("SerialPort.ingredient = %s " %  ingredient) -> port serie
+            # print("SerialPort.ingredient[0] = %s " %  ingredient[0]) -> port serie
+            print("SerialPort.ingredient[1] = %s " %  ingredient[1]) # destinataire
+            print("SerialPort.ingredient[2] = %s " %  ingredient[2]) # bouteille
+            print("SerialPort.ingredient[3] = %s " %  ingredient[3]) # temps en seconde pour la dose 
             if not can_ctrl:
+                # can_ctrl = port serie
                 can_ctrl = SerialCan(ingredient[0])
+                # can_id = destinataire du message
                 can_id = int(ingredient[1])
+                # can_msg = debut du message = destinataire / emetteur : 6 = raspberry / 150 = commande pour servir
                 can_msg = [can_id, 6, 150]
+            # 
             if ingredient[1] != can_id:
-                can_msg += [19, 0, 200, 0]
+                # can_msg += [19, 0, 200, 0]
                 can_ctrl.write(can_msg)
                 can_id = int(ingredient[1])
                 can_msg = [can_id, 6, 150]
@@ -134,8 +140,8 @@ def playRecipe(ingredients_list, qty=1, debug=False):
                 can_ctrl.write(can_msg)
                 can_msg = [can_id, 6, 150]
             # on ajoute les ingredients 2 = numéro de bouteille/ 3 durée en entier
-            can_msg += [int(ingredient[2]) + 1, int(ingredient[3])]
-            print("can_msg  %s " % can_msg)
+            can_msg += [int(ingredient[2]) , int(ingredient[3])]
+            
         elif ingredient[0] == 'gpio':
             try:
                 idx = init_gpio.index(ingredient[1])
@@ -253,16 +259,18 @@ def playRecipe(ingredients_list, qty=1, debug=False):
         end_cock = [19, 0]
         for data_ in end_cock:
             if len(can_msg) % 9 == 0:
+                print("can_msg avec 1 bouteille %s " % can_msg)
                 can_ctrl.write(can_msg[:])
                 can_msg = can_msg[:2]
-                print(can_msg)
+                # print(can_msg)
             can_msg.append(data_)
-            print(can_msg)
+            # print(can_msg)
         if len(can_msg) > 2:
-            print("hhh")
+            print("can_msg avec 2 bouteilles %s " % can_msg)
             can_ctrl.write(can_msg[:])
             can_msg = can_msg[:2]
         can_msg += [200, 0]
+        print("can_msg final %s " % can_msg)
         can_ctrl.write(can_msg)
         
 

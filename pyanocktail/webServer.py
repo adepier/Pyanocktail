@@ -43,7 +43,7 @@ Com['close'] = 9
 Com['config'] = 6
 Com['pump'] = 10
 
-CanCommands = ["stop", "record", "play", "pump", "cocktail", "panic", "status", "modeAuto"]
+CanCommands = ["stop", "record", "play", "pump", "cocktail", "panic", "status", "modeAuto_on", "modeAuto_off"]
 
 
 class WebService(StreamServerEndpointService):
@@ -56,6 +56,7 @@ class WebService(StreamServerEndpointService):
         Initialization of web and websocket servers
         '''
         self.playing = False
+        self.recording_auto = False
         self.conf = conf
         self.recording = False
         self.modeAuto = True
@@ -172,6 +173,9 @@ class WebService(StreamServerEndpointService):
         self.canfactory.serial_port.write(tt.encode("utf8"))
         self.canfactory.serial_port.write(bytes([0xff])) 
         self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+    
+   
+
     def display(self, text):
         self.wsfactory.sendmessage(text.encode("utf8"))
 
@@ -196,10 +200,41 @@ class WebService(StreamServerEndpointService):
         '''
         if not isinstance(command, str):
             command = command.decode('utf8')
-        if command == 'modeAuto':
+        # on eteint le mode auto uniquement si on a pas commencé à enregister 
+        # pour que le bras puisse prendre le verre
+        if command == 'modeAuto_off' and self.recording_auto == False:
 
+            self.midifactory.command('modeAuto 0') 
+            if self.playing:
+                self.playing = False
+            if self.recording:
+                self.recording = False
+            if self.opened:
+                pass
+            # envoi le texte à l'écran
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,99,1,0,0,0,0,0,0xbb]))
+            # on envoie du texte, 0xff termine la ligne
+            tt =  "Pianocktail 2.0"
+            self.canfactory.serial_port.write(tt.encode("utf8")+ b"\r\n")
+            tt =  "Play and drink machine!"
+            self.canfactory.serial_port.write(tt.encode("utf8"))
+            self.canfactory.serial_port.write(bytes([0xff])) 
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
+                # self.set_command('record')
+        elif command == 'modeAuto_on' and self.recording_auto == False:
+            
             self.midifactory.command('modeAuto 1')
- 
+            self.analyzed['cocktail'] = 0
+            self.analyzed['result'] = b''
+            self.recording = True
+            self.notes = []
+             # envoi le texte à l'écran
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,99,1,0,0,0,0,0,0xbb]))
+            # on envoie du texte, 0xff termine la ligne
+            tt =  "Jouez!"
+            self.canfactory.serial_port.write(tt.encode("utf8") )  
+            self.canfactory.serial_port.write(bytes([0xff])) 
+            self.canfactory.serial_port.write(bytes([0xaa,5,6,200,1,0,0,0,0,0,0xbb])) 
             # self.set_command('record')
         elif command == 'stop':
             log.msg("log message stop")
@@ -314,6 +349,7 @@ class WebService(StreamServerEndpointService):
             
         elif command == b'Recording_auto':
             print('recording auto!')
+            self.recording_auto = True
             # on allume les carrousels
             self.canfactory.serial_port.write(bytes([0xaa,1,6,12,0,0,0,0,0,0,0xbb])) 
             self.canfactory.serial_port.write(bytes([0xaa,1,6,200,1,0,0,0,0,0,0xbb]))
@@ -323,9 +359,14 @@ class WebService(StreamServerEndpointService):
             
             self.canfactory.serial_port.write(bytes([0xaa,3,6,12,0,0,0,0,0,0,0xbb])) 
             self.canfactory.serial_port.write(bytes([0xaa,3,6,200,1,0,0,0,0,0,0xbb]))
+            # on met le bras en place
+            self.canfactory.serial_port.write(bytes([0xaa,4,6,122,0,0,0,0,0,0,0xbb])) # cmde = 122 position1
+            self.canfactory.serial_port.write(bytes([0xaa,4,6,200,1,0,0,0,0,0,0xbb])) # cmde = 200 envoi run
+
             self.set_command('record') 
 
         elif command == b'Recorded_auto':
+            self.recording_auto = False
             print('mode auto : recorded -> anaylse -> serve ')  
             self.wsfactory.sendmessage(b"Analysing...")
             # analyse
@@ -676,8 +717,10 @@ class CanSerialProtocol(LineReceiver):
                 self.factory.got_command("record")
             elif data[3] == 13:
                 self.factory.got_command("cocktail")
-            elif data[3] == 14:
-                self.factory.got_command("modeAuto")
+            elif data[3] == 14 and data[4] == 1:
+                self.factory.got_command("modeAuto_on")
+            elif data[3] == 14 and data[4] == 0:
+                self.factory.got_command("modeAuto_off")
             else:
                 print("unknown command %i" % data[2])
         # if self.first:

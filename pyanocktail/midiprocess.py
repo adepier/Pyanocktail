@@ -489,11 +489,13 @@ class Seq(Sequencer):
     def modeAuto(self, param):
        if int(param) == 0:
         #    arrete le mode auto
+        #    print('mode auto OFF' , file=sys.stderr)
            self.modeAuto=False
            self.modeAutoStartTime == None
 
        if int(param) == 1:
         #    demarre le mode auto
+        #    print('mode auto ON' , file=sys.stderr)
            self.modeAuto=True
            self.modeAutoStartTime == None
 
@@ -543,7 +545,7 @@ class Seq(Sequencer):
     def _store_event(self, event):
         # on ajoute le mode Auto, si en mode auto, on commence à analyser
         # à la premiere note touchée.
-        # au bout de 10 sec on lance l'analyse
+        # au bout de 35 sec on lance l'analyse
         if self.modeAuto and  self.modeAutoStartTime == None:
             self.modeAutoStartTime = time()
             self.start_time = time()
@@ -554,7 +556,7 @@ class Seq(Sequencer):
             # et active la methode record de midiprocess.py
             print('1 Recording_auto')
         if self.modeAuto and self.modeAutoStartTime != None:
-            if  time() - self.modeAutoStartTime > 5:
+            if  time() - self.modeAutoStartTime > 35:
                 # on envoie le message au webServer, 
                 # et on remet les variables à zero
                 # self.midi.factory.receive -> webServer.get_command reçoit la commande
